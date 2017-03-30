@@ -1,0 +1,16 @@
+[
+{
+  "modid": "entitylogger",
+  "name": "EntityLogger",
+  "description": "Dumps out entity info every second to find out when villagers disappear",
+  "version": "${version}",
+  "mcversion": "${mcversion}",
+  "url": "",
+  "updateUrl": "",
+  "authorList": ["Giselbaer"],
+  "credits": "",
+  "logoFile": "",
+  "screenshots": [],
+  "dependencies": []
+}
+]
