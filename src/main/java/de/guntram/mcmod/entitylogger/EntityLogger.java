@@ -1,8 +1,6 @@
 package de.guntram.mcmod.entitylogger;
 
 import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.HashMap;
 import java.util.List;
@@ -26,7 +24,7 @@ import net.minecraftforge.fml.relauncher.SideOnly;
         version = EntityLogger.VERSION,
 	clientSideOnly = true, 
 	guiFactory = "de.guntram.mcmod.entitylogger.GuiFactory",
-	acceptedMinecraftVersions = "[1.11.2]"
+	acceptedMinecraftVersions = "[1.12]"
 )
 
 public class EntityLogger
@@ -38,7 +36,7 @@ public class EntityLogger
     boolean connected=false;
     ConfigurationHandler confHandler;
     File logFile;
-    PrintWriter writer;
+    DailyLogWriter logger;
     
     @EventHandler
     public void init(FMLInitializationEvent event)
@@ -51,37 +49,34 @@ public class EntityLogger
         confHandler = ConfigurationHandler.getInstance();
         confHandler.load(event.getSuggestedConfigurationFile());
         MinecraftForge.EVENT_BUS.register(confHandler);
-        logFile=new File(event.getSuggestedConfigurationFile().getParentFile(),
-                "../logs/"+MODID+"."+Minecraft.getMinecraft().getSession().getUsername()+".log");
+        logger=new DailyLogWriter(event.getSuggestedConfigurationFile().getParentFile().getParent()+
+                "/logs/"+MODID+"."+Minecraft.getMinecraft().getSession().getUsername()+"-%d.log");
     }
 
     @SideOnly(Side.CLIENT)
     @SubscribeEvent
     public void onConnectedToServerEvent(FMLNetworkEvent.ClientConnectedToServerEvent event) {
-        if (confHandler.logatall) {
-            try {
-                writer=new PrintWriter(new FileWriter(logFile, true));
-                connected=true;
-                lastLogged=System.currentTimeMillis()+5000;
-            } catch (IOException ex) {
-                ex.printStackTrace(System.err);
-            }
-        }
+        connected=true;
+        lastLogged=System.currentTimeMillis()+5000;
     }
     
     @SideOnly(Side.CLIENT)
     @SubscribeEvent
     public void onDisconnectFromServerEvent(FMLNetworkEvent.ClientDisconnectionFromServerEvent event) {
         if (connected)
-            writer.close();
+            logger.closeWriter();
         connected=false;
     }
     
     @SubscribeEvent
     public void onCLientTick(final ClientTickEvent event) {
         long now;
-        if (!connected || (now=System.currentTimeMillis()) < lastLogged+1000)
+        if (!confHandler.logatall || !connected || (now=System.currentTimeMillis()) < lastLogged+1000)
             return;
+        PrintWriter writer=logger.getWriter();
+        if (writer==null)
+            return;
+
         WorldClient world = Minecraft.getMinecraft().world;
         writer.print(Long.toString(now));
         writer.append(':');
@@ -93,8 +88,10 @@ public class EntityLogger
         List<Entity> entities = world.loadedEntityList;
         writer.append(Integer.toString(entities.size()));
         writer.append(" entities total. ");
+        
         HashMap<Integer, String>strings=new HashMap<Integer, String>();
         int villagers=0;
+
         for (Entity e:entities) {
             if (e.posX>=confHandler.x1 && e.posX <= confHandler.x2+1
             &&  e.posY>=confHandler.y1 && e.posY <= confHandler.y2+1
@@ -105,6 +102,7 @@ public class EntityLogger
                     villagers++;
             }
         }
+
         TreeSet<Integer> indexes = new TreeSet();
         indexes.addAll(strings.keySet());
         writer.print(indexes.size());
