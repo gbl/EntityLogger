@@ -37,7 +37,6 @@ public class DailyLogWriter {
         if (hadErrors)
             return null;
         String dateToUse=currentDateFormatter.format(Calendar.getInstance().getTime());
-        System.out.println("getting writer for "+filenameTemplate+" on "+dateToUse);
         if (writer!=null && !dateToUse.equals(lastUsedDate)) {
             writer.close();
             writer=null;
